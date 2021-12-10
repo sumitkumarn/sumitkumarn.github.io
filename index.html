@@ -144,7 +144,8 @@
             document.getElementById("totalInvestedAmount").innerText = result.totalInvestedAmount;
             document.getElementById("totalReturnsBeforeTax").innerText = Math.floor(result.totalReturnsBeforeTax);
             document.getElementById("actualSuccessPercent").innerText = Math.floor(result.actualSuccessPercentage);
-            document.getElementById("returnPercentageOverall").innerText = (result.totalReturnsBeforeTax - result.totalInvestedAmount)*100/(result.totalInvestedAmount);
+            var overallReturnsPercent = (result.totalReturnsBeforeTax - result.totalInvestedAmount)*100/(result.totalInvestedAmount);
+            document.getElementById("returnPercentageOverall").innerText = overallReturnsPercent.toFixed(2);
             document.getElementById("result").style.display = 'block';
         }
 
