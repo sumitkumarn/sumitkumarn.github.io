@@ -1,0 +1,229 @@
+<html>
+
+<body>
+    <div align="center">
+        <form id="returnCalculator">
+            <table id="formTable" border="2px" style="border-color: green;">
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="initialAmount">Initial Amount:</label>
+                    </td>
+                    <td>
+                        <input type="number" id="initialAmount" name="initialAmount" value="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="incrementalAmount">Incremental Amount (SIP):</label>
+                    </td>
+                    <td>
+                        <input type="number" id="incrementalAmount" name="incrementalAmount" value="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="targetPercentage">Profit Percentage (Per trade):</label>
+                    </td>
+                    <td>
+                        <input type="number" id="targetPercentage" name="targetPercentage" value="0" max="100" min="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="stopLossPercentage">Stop Loss Percentage (Per trade):</label>
+                    </td>
+                    <td>
+                        <input type="number" id="stopLossPercentage" name="stopLossPercentage" value="0" max="100" min="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="successPercentage">Successful trade probability:</label>
+                    </td>
+                    <td>
+                        <input type="number" id="successPercentage" name="successPercentage" value="50" max="100" min="0">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="tradingFrequency">Trading Frequency</label>
+                    </td>
+                    <td>
+                        <select id="tradingFrequency" name="tradingFrequency">
+                            <option value="monthly">Monthly</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="daily">Daily</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="monthlyFutures">Monthly Futures</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color: orange;">
+                        <label for="numberOfDays">Number of days</label>
+                    </td>
+                    <td>
+                        <input type="number" id="numberOfDays" name="numberOfDays" value="365" min="0">
+                    </td>
+                </tr>
+                <tr>
+                </tr>
+            </table>
+            <br/>
+            <button type="submit" value="Calculate">Calculate
+                Returns</button>
+            <input type="reset" value="Reset">
+
+        </form>
+    </div>
+    <br>
+    <div id ="result" align = "center" style="display:none">
+        <h2>Result:</h2>
+        <table id="resultTable" border="1px">
+            <tr>
+                <td>Result Name</td>
+                <td>Value</td>
+            </tr>
+            <tr>
+                <td>Number of trades done:</td>
+                <td id="numOfTradesDone"></td>
+            </tr>
+            <tr>
+                <td>Total Invested Amount:</td>
+                <td id="totalInvestedAmount"></td>
+            </tr>
+            <tr>
+                <td>Total returns before tax:</td>
+                <td id="totalReturnsBeforeTax"></td>
+            </tr>
+            <tr>
+                <td>Actual success % </td>
+                <td id="actualSuccessPercent"></td>
+            </tr>
+            <tr>
+                <td>Return % (Overall) </td>
+                <td id="returnPercentageOverall"></td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+
+<head>
+    <script type="text/javascript">
+
+        class CadenceInfo {
+            constructor(cadence, profitPercent, lossPercent, initialAmount, incrementalAmount, successPercentage) {
+                this.cadence = cadence;
+                this.profitPercent = profitPercent;
+                this.lossPercent = lossPercent;
+                this.initialAmount = initialAmount;
+                this.incrementalAmount = incrementalAmount;
+                this.successPercentage = successPercentage;
+            }
+        }
+
+        class Result {
+            constructor(numberOfTrades, totalInvestedAmount, totalReturnsBeforeTax, actualSuccessPercentage) {
+                this.numberOfTrades = numberOfTrades;
+                this.totalInvestedAmount = totalInvestedAmount;
+                this.totalReturnsBeforeTax = totalReturnsBeforeTax;
+                this.actualSuccessPercentage = actualSuccessPercentage;
+            }
+        }
+
+        window.addEventListener("load", function() {
+            document.getElementById("returnCalculator").addEventListener("submit", function(e) {
+                e.preventDefault();
+                handleFormSubmit();
+            })
+        })
+
+        function renderResult(result) {
+            document.getElementById("numOfTradesDone").innerText = Math.floor(result.numberOfTrades);
+            document.getElementById("totalInvestedAmount").innerText = result.totalInvestedAmount;
+            document.getElementById("totalReturnsBeforeTax").innerText = Math.floor(result.totalReturnsBeforeTax);
+            document.getElementById("actualSuccessPercent").innerText = Math.floor(result.actualSuccessPercentage);
+            document.getElementById("returnPercentageOverall").innerText = (result.totalReturnsBeforeTax - result.totalInvestedAmount)*100/(result.totalInvestedAmount);
+            document.getElementById("result").style.display = 'block';
+        }
+
+        function handleFormSubmit() {
+            var initialAmount = document.getElementById("initialAmount").value;
+            var incrementalAmount = document.getElementById("incrementalAmount").value;
+            var targetPercentage = document.getElementById("targetPercentage").value / 100;
+            var stopLossPercentage = document.getElementById("stopLossPercentage").value / 100;
+            var successPercentage = document.getElementById("successPercentage").value;
+            var tradingFrequency = document.getElementById("tradingFrequency").value;
+            var numberOfDays = document.getElementById("numberOfDays").value;
+
+            var cadenceInfo = new CadenceInfo(tradingFrequency, targetPercentage, stopLossPercentage, parseInt(initialAmount), parseInt(incrementalAmount), successPercentage);
+            var numberOfTrades = Math.floor(calculateNumberOfTrades(cadenceInfo.cadence, numberOfDays));
+            var result = getAveragedReturns(cadenceInfo, numberOfTrades);
+            renderResult(result);
+        }
+
+        function getAveragedReturns(cadenceInfo, numberOfTrades) {
+            var i = 0
+            var numberOfTrials = 1000
+            var sum = 0
+            var result = 0
+            var averageSuccessPercent = 0
+            while(i< numberOfTrials){
+                var resultObj = calculateReturns(cadenceInfo, numberOfTrades); 
+                result += resultObj.totalReturnsBeforeTax; 
+                averageSuccessPercent += resultObj.actualSuccessPercentage;
+                i+=1
+            }
+            var averagedResult = new Result(resultObj.numberOfTrades, resultObj.totalInvestedAmount, (result/numberOfTrials), (averageSuccessPercent/numberOfTrials));
+            return averagedResult;
+        }
+
+        function calculateNumberOfTrades(cadence, numberOfDays) {
+            switch(cadence){
+                case "monthly": return (numberOfDays/30);
+                case "weekly": return (numberOfDays/7);
+                case "daily": return (numberOfDays*250/365);
+                case "yearly": return (numberOfDays/365);
+                case "monthlyFutures": return (numberOfDays/30);
+            }
+        }
+
+        function calculateReturns(cadenceInfo, numberofTrades) {
+            var successPercentage = cadenceInfo.successPercentage;
+            var profitPercent = cadenceInfo.profitPercent;
+            var lossPercent = cadenceInfo.lossPercent;
+            var totalReturns = cadenceInfo.initialAmount;
+
+            var i =0;
+            var successTradeCounter = 0;
+            while(i<numberofTrades){
+                if(isSuccess(successPercentage)){
+                    totalReturns = totalReturns * (1 + profitPercent);
+                    successTradeCounter += 1;
+                }else{
+                    totalReturns = totalReturns * (1 - lossPercent);
+                }
+                totalReturns = totalReturns + cadenceInfo.incrementalAmount;
+                i+=1;
+            }
+            var totalInvestedAmount = (cadenceInfo.initialAmount + numberofTrades * cadenceInfo.incrementalAmount);
+            var successPercentage = (successTradeCounter * 100)/ numberofTrades;
+            var result = new Result(numberofTrades, totalInvestedAmount, totalReturns, successPercentage);
+
+            return result;
+            
+        }
+
+        function isSuccess(successPercentage){
+            if(Math.random(1)*100 <= successPercentage){
+                return true;
+            }
+            return false;
+        }
+
+
+    </script>
+</head>
+
+</html>
